@@ -1,5 +1,12 @@
 # Fly Bird Fly!
 
+[![Deploy](https://github.com/jackykychan/fly-bird-fly/actions/workflows/deploy.yml/badge.svg)](https://github.com/jackykychan/fly-bird-fly/actions/workflows/deploy.yml)
+[![Play it live](https://img.shields.io/badge/play-live-brightgreen)](https://jackykychan.github.io/fly-bird-fly/)
+
+**▶ Play it live: https://jackykychan.github.io/fly-bird-fly/**
+
+![Fly Bird Fly! — a pixel-art bird flying across a desert, dodging cacti](docs/screenshot.png)
+
 A small browser game in the spirit of the Chrome offline dino runner, reskinned
 as a bird flying across a pixel-art desert. The bird holds a fixed spot on the
 left while the world scrolls right-to-left; **hold to fly up, release to fall**
