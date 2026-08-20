@@ -11,10 +11,10 @@ function randRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-// Create a new obstacle pair-as-gap just off the right edge. We model a single
-// passable vertical gap; the space above the gap is a top-anchored bar and the
-// space below is a bottom-anchored bar. Their lengths therefore vary naturally,
-// giving obstacles of different lengths at the top and bottom of the screen.
+// Create the TOP bar of a new gap just off the right edge. We model a single
+// passable vertical gap; the space above it is a top-anchored bar and the space
+// below is a bottom-anchored bar (added in spawnPair). Each bar runs from its
+// screen edge to the gap.
 export function spawnObstacle(score: number, worldWidth: number): Obstacle {
   const width = randRange(OBSTACLE_MIN_WIDTH, OBSTACLE_MAX_WIDTH);
   const gap = gapSize(score);
@@ -27,12 +27,9 @@ export function spawnObstacle(score: number, worldWidth: number): Obstacle {
   );
   const gapBottom = gapTop + gap;
 
-  // Returns the TOP bar (ceiling → gapTop); the bottom bar is derived in
-  // spawnPair below so a single gap becomes two solid bars sharing an x.
   return {
     x: worldWidth + width,
     width,
-    length: gapTop - PLAY_TOP,
     anchor: "top",
     gapTop,
     gapBottom,
@@ -49,7 +46,6 @@ export function spawnPair(
   const bottom: Obstacle = {
     x: top.x,
     width: top.width,
-    length: PLAY_BOTTOM - top.gapBottom,
     anchor: "bottom",
     gapTop: top.gapTop,
     gapBottom: top.gapBottom,

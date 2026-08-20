@@ -2,7 +2,13 @@ import { useCallback, useState } from "react";
 import { GameCanvas } from "./ui/GameCanvas";
 import { Hud } from "./ui/Hud";
 import { Overlay } from "./ui/Overlay";
-import { loadHighScore, saveHighScore } from "./storage";
+import {
+  loadBirdColor,
+  loadHighScore,
+  saveBirdColor,
+  saveHighScore,
+} from "./storage";
+import { type BirdColorName } from "./game/constants";
 
 type Phase = "menu" | "playing" | "gameover";
 
@@ -11,6 +17,14 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => loadHighScore());
   const [isNewBest, setIsNewBest] = useState(false);
+  const [birdColor, setBirdColor] = useState<BirdColorName>(() =>
+    loadBirdColor(),
+  );
+
+  const handleSelectColor = useCallback((name: BirdColorName) => {
+    setBirdColor(name);
+    saveBirdColor(name);
+  }, []);
 
   const handleStart = useCallback(() => {
     setScore(0);
@@ -38,6 +52,7 @@ export default function App() {
     <div className="app">
       <GameCanvas
         running={phase === "playing"}
+        birdColor={birdColor}
         onScore={setScore}
         onGameOver={handleGameOver}
       />
@@ -47,6 +62,8 @@ export default function App() {
         score={score}
         highScore={highScore}
         isNewBest={isNewBest}
+        birdColor={birdColor}
+        onSelectColor={handleSelectColor}
         onStart={handleStart}
       />
     </div>

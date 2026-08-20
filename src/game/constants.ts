@@ -13,10 +13,24 @@ export const REFERENCE_WIDTH = 800;
 // Bird
 export const BIRD_X_FRACTION = 0.28; // horizontal position as a fraction of width
 export const BIRD_RADIUS = 14;
-export const BIRD_VERTICAL_SPEED = 340; // px/sec while holding up/down
-// Vertical deadzone (world px) around a touch target within which the bird
-// holds — a tap level with the bird does nothing.
-export const POINTER_DEADZONE = 10;
+
+// Flight physics (hold-to-fly): gravity pulls the bird down by default; holding
+// the control applies a stronger upward thrust so it rises. Vertical velocity is
+// clamped so it never rises or falls too fast.
+export const FLY_GRAVITY = 1250; // world px/s^2 pulling the bird down
+export const FLY_THRUST = 2650; // world px/s^2 upward while the control is held
+export const FLY_MAX_RISE = 330; // max upward speed (world px/s)
+export const FLY_MAX_FALL = 470; // max downward speed (world px/s)
+
+// Selectable plain body colors for the bird.
+export const BIRD_COLORS = {
+  yellow: "#ffd24a",
+  blue: "#3a86ff",
+  green: "#46c24a",
+  red: "#e23636",
+} as const;
+export type BirdColorName = keyof typeof BIRD_COLORS;
+export const DEFAULT_BIRD_COLOR: BirdColorName = "yellow";
 
 // Play-area vertical margins (bird clamps inside these; also the ceiling/floor)
 export const PLAY_TOP = 8;
@@ -62,3 +76,9 @@ export const SCORE_PER_SECOND = 10;
 
 // Fixed-timestep simulation step (seconds).
 export const FIXED_DT = 1 / 120;
+
+// Pixel-art rendering: the scene is drawn into a low-res offscreen buffer and
+// upscaled with nearest-neighbor. This is how many world units map to one
+// "virtual pixel" — larger = chunkier. At 3, the buffer is WORLD_HEIGHT/3 = 150
+// virtual pixels tall.
+export const WORLD_PER_PIXEL = 3;

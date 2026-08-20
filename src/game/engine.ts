@@ -1,26 +1,34 @@
-import { BIRD_X_FRACTION, FIXED_DT } from "./constants";
+import {
+  BIRD_X_FRACTION,
+  DEFAULT_BIRD_COLOR,
+  BIRD_COLORS,
+  FIXED_DT,
+  WORLD_HEIGHT,
+  WORLD_PER_PIXEL,
+} from "./constants";
 import { scrollSpeedFor } from "./difficulty";
-import { pointerIntent } from "./pointer";
 import { computeView, render, type View } from "./render";
 import { simulateStep } from "./simulate";
-import { createInitialState, type GameState, type Intent } from "./state";
+import { createInitialState, type GameState } from "./state";
 
 export interface EngineCallbacks {
   onScore: (score: number) => void;
   onGameOver: (score: number) => void;
 }
 
-// The engine reads input abstractly: a keyboard intent, plus an optional active
-// touch position (client Y) that steers the bird toward the finger.
+// The engine reads input as a single "thrust" boolean: held = fly up, released
+// = fall under gravity.
 export interface InputSource {
-  keyboardIntent: () => Intent;
-  pointerClientY: () => number | null;
+  thrust: () => boolean;
 }
 
 // Drives the simulation with a fixed-timestep accumulator so gameplay is
 // frame-rate independent, and renders each animation frame.
 export class Engine {
   private ctx: CanvasRenderingContext2D;
+  // Low-resolution offscreen buffer for the pixel-art upscale.
+  private off: HTMLCanvasElement;
+  private offCtx: CanvasRenderingContext2D;
   private state: GameState;
   private view: View;
   private rafId = 0;
@@ -29,7 +37,7 @@ export class Engine {
   private accumulator = 0;
   private scrollOffset = 0;
   private reportedScore = -1;
-  private canvasClientTop = 0;
+  private birdColor: string = BIRD_COLORS[DEFAULT_BIRD_COLOR];
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -39,6 +47,10 @@ export class Engine {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("2D canvas context unavailable");
     this.ctx = ctx;
+    this.off = document.createElement("canvas");
+    const offCtx = this.off.getContext("2d");
+    if (!offCtx) throw new Error("2D offscreen context unavailable");
+    this.offCtx = offCtx;
     this.state = createInitialState();
     this.view = computeView(1, 1);
     this.resize();
@@ -54,13 +66,15 @@ export class Engine {
     this.canvas.width = Math.round(cssW * dpr);
     this.canvas.height = Math.round(cssH * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.canvasClientTop = rect.top;
     this.view = computeView(cssW, cssH);
+    // Size the low-res buffer: fixed ~150px tall, width follows the aspect.
+    this.off.width = Math.max(1, Math.round(this.view.worldWidth / WORLD_PER_PIXEL));
+    this.off.height = Math.max(1, Math.round(WORLD_HEIGHT / WORLD_PER_PIXEL));
     // Keep the world width and the bird's fixed x in sync with the new size.
     this.state.worldWidth = this.view.worldWidth;
     this.state.bird.x = this.view.worldWidth * BIRD_X_FRACTION;
     // Redraw immediately so a resize while paused still looks correct.
-    render(this.ctx, this.state, this.view, this.scrollOffset);
+    render(this.ctx, this.off, this.offCtx, this.state, this.view, this.scrollOffset, this.birdColor);
   }
 
   start(): void {
@@ -80,6 +94,15 @@ export class Engine {
     this.rafId = 0;
   }
 
+  // Set the bird's plain body color (hex). Redraws immediately when idle so the
+  // menu preview updates.
+  setBirdColor(color: string): void {
+    this.birdColor = color;
+    if (!this.running) {
+      render(this.ctx, this.off, this.offCtx, this.state, this.view, this.scrollOffset, this.birdColor);
+    }
+  }
+
   private frame = (now: number): void => {
     if (!this.running) return;
 
@@ -97,7 +120,7 @@ export class Engine {
       if (this.state.status === "dead") break;
     }
 
-    render(this.ctx, this.state, this.view, this.scrollOffset);
+    render(this.ctx, this.off, this.offCtx, this.state, this.view, this.scrollOffset, this.birdColor);
 
     const shownScore = Math.floor(this.state.score);
     if (shownScore !== this.reportedScore) {
@@ -121,24 +144,6 @@ export class Engine {
     if (s.status === "alive") {
       this.scrollOffset += scrollSpeedFor(s.score, s.worldWidth) * dt;
     }
-    simulateStep(s, this.resolveIntent(), dt);
-  }
-
-  // Keyboard takes priority when a key is held; otherwise an active touch
-  // steers the bird toward the finger: above the bird → up, below → down,
-  // level with it (within a deadzone) → hold.
-  private resolveIntent(): Intent {
-    const kb = this.input.keyboardIntent();
-    if (kb !== 0) return kb;
-
-    const pointerY = this.input.pointerClientY();
-    if (pointerY === null) return 0;
-
-    return pointerIntent(
-      pointerY,
-      this.canvasClientTop,
-      this.view,
-      this.state.bird.y,
-    );
+    simulateStep(s, this.input.thrust(), dt);
   }
 }

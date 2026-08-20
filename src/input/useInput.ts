@@ -1,100 +1,91 @@
 import { useEffect, useRef } from "react";
 import type { InputSource } from "../game/engine";
-import type { Intent } from "../game/state";
 
-// Wires up keyboard (↑/↓, W/S) and touch input and exposes a stable
-// InputSource for the engine. Touch reports the active finger's client Y; the
-// engine turns that into "move toward the finger" relative to the bird. Holding
-// above the bird moves it up, below moves it down, level with it does nothing.
-// `enabled` gates whether input is read (only during active play).
+// Hold-to-fly input. The bird thrusts up while any control is held and falls
+// under gravity otherwise:
+//   - Desktop: hold Space (or ↑ / W), or hold the mouse button on the play area.
+//   - Mobile: touch and hold anywhere on the play area.
+// Exposes a stable InputSource so the engine effect doesn't re-run each render.
+// `enabled` gates input to active play only.
 export function useInput(
   target: React.RefObject<HTMLElement>,
   enabled: boolean,
 ): InputSource {
-  const keyboardIntentRef = useRef<Intent>(0);
-  const keysRef = useRef({ up: false, down: false });
-  const pointerYRef = useRef<number | null>(null);
+  const keyRef = useRef(false);
+  const mouseRef = useRef(false);
+  const touchRef = useRef(false);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
 
-  // A stable source object so consumers (the engine effect) don't re-run and
-  // recreate the engine on every render.
+  // Stable source object so the engine isn't recreated on every render.
   const sourceRef = useRef<InputSource>();
   if (!sourceRef.current) {
     sourceRef.current = {
-      keyboardIntent: () => keyboardIntentRef.current,
-      pointerClientY: () => pointerYRef.current,
+      thrust: () => keyRef.current || mouseRef.current || touchRef.current,
     };
   }
 
-  // Reset any latched input whenever play is (dis)enabled.
+  // Release any held input whenever play is (dis)enabled.
   useEffect(() => {
-    keyboardIntentRef.current = 0;
-    keysRef.current = { up: false, down: false };
-    pointerYRef.current = null;
+    keyRef.current = false;
+    mouseRef.current = false;
+    touchRef.current = false;
   }, [enabled]);
 
   useEffect(() => {
     const el = target.current;
     if (!el) return;
 
-    const recompute = () => {
-      const { up, down } = keysRef.current;
-      keyboardIntentRef.current = up === down ? 0 : up ? -1 : 1;
-    };
+    const isThrustKey = (e: KeyboardEvent) =>
+      e.key === " " ||
+      e.key === "Spacebar" ||
+      e.key === "ArrowUp" ||
+      e.key === "w" ||
+      e.key === "W";
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!enabledRef.current) return;
-      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-        keysRef.current.up = true;
-        e.preventDefault();
-        recompute();
-      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-        keysRef.current.down = true;
-        e.preventDefault();
-        recompute();
-      }
+      if (!enabledRef.current || !isThrustKey(e)) return;
+      keyRef.current = true;
+      e.preventDefault();
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (!isThrustKey(e)) return;
+      keyRef.current = false;
     };
 
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-        keysRef.current.up = false;
-        recompute();
-      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
-        keysRef.current.down = false;
-        recompute();
-      }
+    const onMouseDown = (e: MouseEvent) => {
+      if (!enabledRef.current || e.button !== 0) return;
+      mouseRef.current = true;
+      e.preventDefault();
+    };
+    const onMouseUp = () => {
+      mouseRef.current = false;
     };
 
     const onTouchStart = (e: TouchEvent) => {
       if (!enabledRef.current) return;
-      pointerYRef.current = e.touches[0].clientY;
+      touchRef.current = true;
       e.preventDefault();
     };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!enabledRef.current) return;
-      pointerYRef.current = e.touches[0].clientY;
-      e.preventDefault();
-    };
-
     const onTouchEnd = (e: TouchEvent) => {
-      pointerYRef.current = null;
+      touchRef.current = false;
       e.preventDefault();
     };
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
     el.addEventListener("touchstart", onTouchStart, { passive: false });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: false });
     el.addEventListener("touchcancel", onTouchEnd, { passive: false });
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
       el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };

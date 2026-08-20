@@ -1,7 +1,9 @@
-import { BIRD_RADIUS, PLAY_BOTTOM, PLAY_TOP } from "./constants";
+import { BIRD_RADIUS, WORLD_HEIGHT } from "./constants";
 import type { Bird, Obstacle } from "./state";
 
-// The solid rectangle occupied by an obstacle bar, in world coordinates.
+// The solid rectangle occupied by an obstacle bar, in world coordinates. Bars
+// run all the way from the screen edge to the passable gap (no margin), so the
+// cactus touches the top/bottom of the screen.
 export function obstacleRect(o: Obstacle): {
   x: number;
   y: number;
@@ -9,9 +11,9 @@ export function obstacleRect(o: Obstacle): {
   h: number;
 } {
   if (o.anchor === "top") {
-    return { x: o.x, y: PLAY_TOP, w: o.width, h: o.length };
+    return { x: o.x, y: 0, w: o.width, h: o.gapTop };
   }
-  return { x: o.x, y: PLAY_BOTTOM - o.length, w: o.width, h: o.length };
+  return { x: o.x, y: o.gapBottom, w: o.width, h: WORLD_HEIGHT - o.gapBottom };
 }
 
 // Circle (bird) vs axis-aligned rectangle (obstacle) intersection.

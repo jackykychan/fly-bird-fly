@@ -1,11 +1,10 @@
 import { BIRD_X_FRACTION, REFERENCE_WIDTH, WORLD_HEIGHT } from "./constants";
 
-// A single obstacle bar anchored to either the top or bottom edge.
-// `x` is the left edge, `length` is how far it protrudes from its anchor.
+// A single obstacle bar anchored to either the top or bottom edge. It spans from
+// the screen edge to the passable gap (see `obstacleRect`).
 export interface Obstacle {
   x: number;
   width: number;
-  length: number;
   anchor: "top" | "bottom";
   gapTop: number; // y of the top of the passable gap
   gapBottom: number; // y of the bottom of the passable gap
@@ -31,9 +30,6 @@ export interface Feather {
   life: number; // remaining life (seconds); fades out as it drops
 }
 
-// Input intent: -1 = move up, +1 = move down, 0 = hold.
-export type Intent = -1 | 0 | 1;
-
 // Run status: alive (playing), dying (crash animation), dead (finished).
 export type Status = "alive" | "dying" | "dead";
 
@@ -43,6 +39,7 @@ export interface GameState {
   feathers: Feather[];
   worldWidth: number; // current logical width (varies with the viewport)
   score: number;
+  scoringStarted: boolean; // true once the bird has passed its first obstacle
   elapsed: number; // seconds since run start
   timeToNextSpawn: number; // seconds
   status: Status;
@@ -61,6 +58,7 @@ export function createInitialState(worldWidth = REFERENCE_WIDTH): GameState {
     feathers: [],
     worldWidth,
     score: 0,
+    scoringStarted: false,
     elapsed: 0,
     timeToNextSpawn: 0.6, // brief grace before the first obstacle
     status: "alive",

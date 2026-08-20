@@ -1,16 +1,23 @@
 import { useEffect, useRef } from "react";
 import { Engine } from "../game/engine";
 import { useInput } from "../input/useInput";
+import { BIRD_COLORS, type BirdColorName } from "../game/constants";
 
 interface GameCanvasProps {
   running: boolean;
+  birdColor: BirdColorName;
   onScore: (score: number) => void;
   onGameOver: (score: number) => void;
 }
 
 // Owns the <canvas>, the game Engine, and the input wiring. The engine runs
 // while `running` is true; it stops itself on game over (via onGameOver).
-export function GameCanvas({ running, onScore, onGameOver }: GameCanvasProps) {
+export function GameCanvas({
+  running,
+  birdColor,
+  onScore,
+  onGameOver,
+}: GameCanvasProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Engine | null>(null);
@@ -33,6 +40,7 @@ export function GameCanvas({ running, onScore, onGameOver }: GameCanvasProps) {
       onScore: (s) => onScoreRef.current(s),
       onGameOver: (s) => onGameOverRef.current(s),
     });
+    engine.setBirdColor(BIRD_COLORS[birdColor]);
     engineRef.current = engine;
 
     const ro = new ResizeObserver(() => engine.resize());
@@ -44,6 +52,11 @@ export function GameCanvas({ running, onScore, onGameOver }: GameCanvasProps) {
       engineRef.current = null;
     };
   }, [input]);
+
+  // Push color changes to the engine (updates the idle menu preview too).
+  useEffect(() => {
+    engineRef.current?.setBirdColor(BIRD_COLORS[birdColor]);
+  }, [birdColor]);
 
   // Start/stop the run in response to the `running` flag.
   useEffect(() => {

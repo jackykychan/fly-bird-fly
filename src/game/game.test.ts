@@ -9,10 +9,9 @@ import {
 import {
   GAP_MIN,
   GAP_START,
-  PLAY_BOTTOM,
-  PLAY_TOP,
   SCROLL_SPEED_MAX,
   SCROLL_SPEED_START,
+  WORLD_HEIGHT,
 } from "./constants";
 import type { Obstacle } from "./state";
 
@@ -30,32 +29,32 @@ describe("collision", () => {
     expect(circleHitsRect(7, 7, 5, 10, 10, 4, 4)).toBe(true);
   });
 
-  it("maps a top-anchored obstacle to a rect at the ceiling", () => {
+  it("maps a top-anchored obstacle from the ceiling edge to the gap", () => {
     const o: Obstacle = {
       x: 100,
       width: 40,
-      length: 60,
       anchor: "top",
-      gapTop: PLAY_TOP + 60,
-      gapBottom: PLAY_TOP + 60 + 150,
+      gapTop: 68,
+      gapBottom: 218,
       scored: false,
     };
     const r = obstacleRect(o);
-    expect(r).toEqual({ x: 100, y: PLAY_TOP, w: 40, h: 60 });
+    // Spans the true top edge (y=0) down to the gap top.
+    expect(r).toEqual({ x: 100, y: 0, w: 40, h: 68 });
   });
 
-  it("maps a bottom-anchored obstacle to a rect at the floor", () => {
+  it("maps a bottom-anchored obstacle from the gap to the floor edge", () => {
     const o: Obstacle = {
       x: 100,
       width: 40,
-      length: 60,
       anchor: "bottom",
-      gapTop: 0,
-      gapBottom: 0,
+      gapTop: 200,
+      gapBottom: 300,
       scored: false,
     };
     const r = obstacleRect(o);
-    expect(r).toEqual({ x: 100, y: PLAY_BOTTOM - 60, w: 40, h: 60 });
+    // Spans the gap bottom down to the true bottom edge (WORLD_HEIGHT).
+    expect(r).toEqual({ x: 100, y: 300, w: 40, h: WORLD_HEIGHT - 300 });
   });
 });
 

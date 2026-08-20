@@ -7,19 +7,21 @@ import {
   FEATHER_COUNT,
   FEATHER_GRAVITY,
   FEATHER_LIFE,
+  PLAY_BOTTOM,
+  PLAY_TOP,
   SCORE_PER_SECOND,
   WORLD_HEIGHT,
 } from "./constants";
 import { scrollSpeedFor, spawnIntervalFor } from "./difficulty";
 import { spawnPair, updateObstacles } from "./obstacles";
-import type { Feather, GameState, Intent } from "./state";
+import type { Feather, GameState } from "./state";
 
-// Advance the game one fixed timestep. Pure with respect to `state` (mutated in
-// place) apart from Math.random, so both the live Engine and headless tests
-// share identical gameplay rules.
+// Advance the game one fixed timestep. `thrust` is whether the fly control is
+// held this step. Pure with respect to `state` (mutated in place) apart from
+// Math.random, so both the live Engine and headless tests share identical rules.
 export function simulateStep(
   state: GameState,
-  intent: Intent,
+  thrust: boolean,
   dt: number,
 ): void {
   if (state.status === "dead") return;
@@ -31,9 +33,8 @@ export function simulateStep(
   const speed = scrollSpeedFor(state.score, state.worldWidth);
 
   state.elapsed += dt;
-  state.score += SCORE_PER_SECOND * dt;
 
-  updateBird(state.bird, intent, dt);
+  updateBird(state.bird, thrust, dt);
   updateObstacles(state, speed, dt);
 
   state.timeToNextSpawn -= dt;
@@ -43,7 +44,21 @@ export function simulateStep(
     state.timeToNextSpawn += spawnIntervalFor(state.score, state.worldWidth);
   }
 
-  if (birdHitsAny(state.bird, state.obstacles)) {
+  // Scoring only begins once the bird has passed its first obstacle (the
+  // obstacle's right edge is left of the bird), then accrues over time.
+  for (const o of state.obstacles) {
+    if (!o.scored && o.x + o.width < state.bird.x) {
+      o.scored = true;
+      state.scoringStarted = true;
+    }
+  }
+  if (state.scoringStarted) state.score += SCORE_PER_SECOND * dt;
+
+  // Hitting an obstacle OR the top/bottom edge of the screen ends the run.
+  const hitEdge =
+    state.bird.y <= PLAY_TOP + BIRD_RADIUS ||
+    state.bird.y >= PLAY_BOTTOM - BIRD_RADIUS;
+  if (hitEdge || birdHitsAny(state.bird, state.obstacles)) {
     startDeath(state);
   }
 }
