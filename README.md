@@ -36,6 +36,13 @@ npm run build    # type-check + production build to dist/
 npm run preview  # serve the production build
 ```
 
+## Deploy
+
+Live at **https://jackykychan.github.io/simple-bird-game/**. Every push to
+`main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml`,
+which builds and publishes `dist/` to GitHub Pages. The Vite `base` is set to
+`/simple-bird-game/` for production builds (see [vite.config.ts](vite.config.ts)).
+
 ## Layout
 
 ```
